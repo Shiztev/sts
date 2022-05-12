@@ -1,4 +1,4 @@
-package ssftp;
+package com.ssftp;
 
 /**
  * Hello world!

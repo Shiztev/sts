@@ -1,4 +1,4 @@
-package ssftp;
+package com.ssftp;
 
 import static org.junit.Assert.assertTrue;
 
