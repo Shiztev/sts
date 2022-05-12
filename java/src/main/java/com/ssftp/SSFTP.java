@@ -67,4 +67,12 @@ public class SSFTP {
       e.printStackTrace();
     }
   }
+
+
+  /**
+   * Process user input and run respective commands.
+   */
+  public void run() {
+
+  }
 }
