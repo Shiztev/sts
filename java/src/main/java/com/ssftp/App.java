@@ -9,5 +9,6 @@ public class App {
   public static void main( String[] args ) {
     // parse args
     // if port provided, call correct SSFTP constructor
+    System.out.println("main runs!!");
   }
 }
