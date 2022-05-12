@@ -57,7 +57,9 @@ public class SSFTP {
 
       // set up cleanup
       Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-        
+        channel.disconnect();
+        session.disconnect();
+        System.out.println("connection terminated");
       }));
 
     } catch (JSchException e) {
