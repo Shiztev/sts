@@ -60,7 +60,7 @@ public class SSFTP {
   public SSFTP(String username, String host, int port) {
 
     this.user = username;
-    this.host = host
+    this.host = host;
 
     try {
       // create session
