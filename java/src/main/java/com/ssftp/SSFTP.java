@@ -1,12 +1,13 @@
 package com.ssftp;
+import java.io.Console;
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Scanner;
 
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import java.io.Console.readPassword;
-
 
 /**
  * A SSFTP client session.
@@ -41,12 +42,18 @@ public class SSFTP {
   private static Scanner scanner = new Scanner(System.in);
 
   /**
+   * THe {@link Console} IO of the system.
+   */
+  private static Console console;
+
+  /**
    * Initialize an SSFTP session over the default SSH port. This is probably what you want to do.
    * 
    * @param username name of the account to access on the SSH server
    * @param host the hostname of the SSH server
+   * @throws IOException
    */
-  public SSFTP(String username, String host) {
+  public SSFTP(String username, String host) throws IOException {
     this(username, host, 22);
   }
   
@@ -56,11 +63,17 @@ public class SSFTP {
    * @param username name of the account to access on the SSH server
    * @param host the hostname of the SSH server
    * @param port the port to communicate over
+   * @throws IOException
    */
-  public SSFTP(String username, String host, int port) {
+  public SSFTP(String username, String host, int port) throws IOException {
 
     this.user = username;
     this.host = host;
+
+    if (((console = System.console())) == null) {
+      System.err.println("error: cannot access system console");
+      throw new IOException();
+    }
 
     try {
       // create session
@@ -68,7 +81,42 @@ public class SSFTP {
 
       // get password
       System.out.print("password: ");
-      session.setPassword(scanner.nextLine().strip());
+      char[] pw = console.readPassword();
+      String p = new String(pw);
+      session.setPassword(p);
+
+      // attempt to wipe password from memory (the jvm's making me rip my hair out... you can't actually remove memory ;-;)
+      new Thread(() -> {
+        // zero out char array
+        for (int i = 0; i < pw.length; ++i) {
+          pw[i] = 0;
+        }
+
+        Field field;
+
+        try {
+          field = String.class.getDeclaredField("value");
+          field.setAccessible(true);
+
+          String value = new String();
+          for (int i = 0; i < p.length(); ++i) {
+            value += "0";
+          }
+
+          field.set(p, value);
+
+        } catch (NoSuchFieldException e) {
+          e.printStackTrace();
+        } catch (SecurityException e) {
+          e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+          e.printStackTrace();
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        }
+        
+      }).run();
+
       System.out.println();
       
 
