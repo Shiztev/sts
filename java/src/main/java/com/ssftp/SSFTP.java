@@ -5,6 +5,7 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import java.io.Console.readPassword;
 
 
 /**
@@ -14,9 +15,30 @@ import com.jcraft.jsch.Session;
  */
 public class SSFTP {
 
+  /**
+   * The domain/ip of the host server.
+   */
+  private String host = null;
+
+  /**
+   * The username of the account on the host server.
+   */
+  private String user = null;
+
+  /**
+   * Network {@link Session} with the host on some arbitrary port.
+   */
   private Session session = null;
+
+  /**
+   * The {@link Channel} that can be used to communicate with the server.
+   */
   private ChannelExec channel = null;
-  private Scanner scanner = new Scanner(System.in);
+
+  /**
+   * {@link Scanner} for user input from standard input.
+   */
+  private static Scanner scanner = new Scanner(System.in);
 
   /**
    * Initialize an SSFTP session over the default SSH port. This is probably what you want to do.
@@ -37,7 +59,8 @@ public class SSFTP {
    */
   public SSFTP(String username, String host, int port) {
 
-
+    this.user = username;
+    this.host = host
 
     try {
       // create session
@@ -47,6 +70,7 @@ public class SSFTP {
       System.out.print("password: ");
       session.setPassword(scanner.nextLine().strip());
       System.out.println();
+      
 
       // configure and connect session
       session.setConfig("StrictHostKeyChecking", "no");
