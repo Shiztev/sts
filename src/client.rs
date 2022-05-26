@@ -13,6 +13,8 @@ pub fn run() {
   // TODO: read ip from CLI
   let username: &str = "";
 
+  let p_needed: bool = true;
+
   // Connect to SSH dest
   let tcp: TcpStream = TcpStream::connect(addr).unwrap();
 
@@ -22,7 +24,7 @@ pub fn run() {
   s.handshake().unwrap();  // confirm conneciton
 
   // determine if password is needed
-  if (p_needed) {
+  if p_needed {
     s.userauth_password(username, password).unwrap();
 
   } else {
