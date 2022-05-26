@@ -1,3 +1,6 @@
 ### VS Code ###
 .vscode/
-./java/target/
+
+# Added by cargo
+
+/target
