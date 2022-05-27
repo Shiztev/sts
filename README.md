@@ -4,7 +4,7 @@ CLI application for ssh and sftp.
 ## Dependancies
 Rust >= 1.60.0
 
-OpenSSL (needs libssl.so.1.1)
+libssl.so.1.1 (can get via OpenSSL)
 
 
 # Commands
