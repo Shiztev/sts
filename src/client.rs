@@ -7,7 +7,7 @@ use rpassword;
 // TODO: INSTALL libssl.so.1.1, if need be see: https://github.com/openssl/openssl/issues/1740
 
 /// Start an SSH and SFTP connection, and loop while executing user commands.
-pub fn run() {
+pub fn run(args: Vec<String>) {
   // reference: https://docs.rs/ssh2/latest/ssh2/index.html
   println!("Run is running!");
 
