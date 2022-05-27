@@ -2,15 +2,17 @@
 
 use ssh2::Session;
 use std::net::TcpStream;
+use rpassword;
+
+// TODO: INSTALL libssl.so.1.1, if need be see: https://github.com/openssl/openssl/issues/1740
 
 /// Start an SSH and SFTP connection, and loop while executing user commands.
 pub fn run() {
   // reference: https://docs.rs/ssh2/latest/ssh2/index.html
   println!("Run is running!");
 
+  // TODO: read ip and username from CLI
   let addr: &str = "127.0.0.1:22";
-
-  // TODO: read ip from CLI
   let username: &str = "";
 
   let p_needed: bool = true;
@@ -24,11 +26,14 @@ pub fn run() {
   s.handshake().unwrap();  // confirm conneciton
 
   // determine if password is needed
+
   if p_needed {
-    s.userauth_password(username, password).unwrap();
+    // rpassword docs: https://docs.rs/rpassword/6.0.1/rpassword/
+    let password: String = rpassword::prompt_password("password: ").unwrap();  // read password
+    s.userauth_password(username, password.as_str()).unwrap();  // auth
 
   } else {
-    s.userauth_agent(username).unwrap();
+    s.userauth_agent(username).unwrap();  // auth
   }
 
 
@@ -41,7 +46,7 @@ pub fn run() {
   
   for i in a.identities().unwrap() {
     println!("{}", i.comment());
-    let pk = i.blob();
+    let _pk = i.blob();
   }
 }
 

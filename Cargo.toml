@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 ssh2 = "0.9.3"
+rpassword = "6.0.1"
 
