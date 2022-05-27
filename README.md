@@ -9,6 +9,6 @@ OpenSSL (needs libssl.so.1.1)
 # Commands
 First, install the dependancies: `cargo install --path .`
 
-To compile/run: `cargo run`
+To run: `cargo run`
 
 To build: `cargo build`
