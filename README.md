@@ -2,7 +2,7 @@
 CLI application for ssh and sftp. 
 
 ## Dependancies
-Rust (and Cargo) >= 1.60.0
+Rust >= 1.60.0
 OpenSSL (needs libssl.so.1.1)
 
 
