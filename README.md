@@ -3,7 +3,8 @@ A CLI application that combines SSH and SFTP functionality to simplify and unify
 
 ## Requirements
 Rust (and Cargo) >= 1.60.0
-OpenSSL (needs libssl.so.1.1)
+
+libssl.so.1.1 (can get via OpenSSL)
 
 
 # Commands
