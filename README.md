@@ -2,7 +2,7 @@
 A CLI application that combines SSH and SFTP functionality to simplify and unify the two services.
 
 ## Requirements
-Rust (and Cargo) >= 1.60.0
+Rust >= 1.60.0
 
 libssl.so.1.1 (can get via OpenSSL)
 
