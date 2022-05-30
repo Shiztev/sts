@@ -1,12 +1,10 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::Session;
-use std::{net::TcpStream, str::Split};
+use std::net::TcpStream;
 use rpassword;
 
 // TODO: INSTALL libssl.so.1.1, if need be see: https://github.com/openssl/openssl/issues/1740
-
-// TODO: SWITCH FROM SSH2 TO THRUSSH https://docs.rs/thrussh/latest/thrussh/
 
 /// Start an SSH and SFTP connection, and loop while executing user commands.
 pub fn run(args: &str) {
