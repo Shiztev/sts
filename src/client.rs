@@ -12,7 +12,7 @@ pub fn run(args: &str) {
   println!("Run is running!");
 
   // TODO: read ip and username from CLI
-  let p: Vec<&str> = args.split("@").collect();
+  let _p: Vec<&str> = args.split("@").collect();
 
   // let username: &str = p[0];
   let username: &str = "";
