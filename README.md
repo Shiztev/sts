@@ -13,3 +13,10 @@ First, install the dependancies: `cargo install --path .`
 To run: `cargo run`
 
 To build: `cargo build`
+
+# Credits
+<a target="_blank" href="https://github.com/sfackler/rust-openssl">openssl library</a>
+
+<a target="_blank" href="https://github.com/alexcrichton/ssh2-rs">ssh2-rs library</a>
+
+<a target="_blank" href="https://github.com/conradkleinespel/rpassword">rpassword library</a>
