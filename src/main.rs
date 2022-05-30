@@ -8,5 +8,5 @@ fn main() {
     panic!("usage: ssftp <username>@<ip/domain name/...>");
   }
 
-  client::run(args);
+  client::run(&args[0].as_str());
 }
