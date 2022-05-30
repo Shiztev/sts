@@ -7,13 +7,18 @@ use rpassword;
 // TODO: INSTALL libssl.so.1.1, if need be see: https://github.com/openssl/openssl/issues/1740
 
 /// Start an SSH and SFTP connection, and loop while executing user commands.
-pub fn run() {
+pub fn run(args: &str) {
   // reference: https://docs.rs/ssh2/latest/ssh2/index.html
   println!("Run is running!");
 
   // TODO: read ip and username from CLI
-  let addr: &str = "127.0.0.1:22";
+  let p: Vec<&str> = args.split("@").collect();
+
+  // let username: &str = p[0];
   let username: &str = "";
+  // let addr: &str = p[1];
+  let addr: &str = "127.0.0.1:22";
+
 
   let p_needed: bool = true;
 
