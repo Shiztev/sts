@@ -4,6 +4,9 @@ use ssh2::Session;
 use std::net::TcpStream;
 use rpassword;
 
+struct Ssftp {
+
+}
 
 /// Start an SSH and SFTP connection, and loop while executing user commands.
 pub fn run(args: &str) {
