@@ -1,4 +1,5 @@
 mod client;
+use client::Ssftp;
 use std::env;
 
 fn main() {
@@ -6,7 +7,9 @@ fn main() {
   
   if args.len() != 1 {
     panic!("usage: ssftp <username>@<ip/domain name/...>");
-  }
 
-  client::run(&args[0].as_str());
+  } else {
+    let mut ssftp: Ssftp = Ssftp::new(&args[0]);
+    ssftp.ssh_init();
+  }
 }
