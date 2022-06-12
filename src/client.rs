@@ -37,6 +37,11 @@ impl Ssftp {
     println!("connection successful");
   }
 
+  /// Prompts user for input and prints server response.
+  pub fn run(self) {
+
+  }
+
   /// Runs the provided command.
   pub fn run_cmd(cmd: String) {
 
