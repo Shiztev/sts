@@ -7,7 +7,9 @@ use rpassword;
 pub struct Ssftp {
   username: String,
   addr: String,
-  sess: Session
+  sess: Session,
+  path: String,
+  token: String
 }
 
 impl Ssftp {
@@ -17,7 +19,9 @@ impl Ssftp {
     let ssftp: Ssftp = Ssftp {
       username: "".to_string(),  // self.username = p[0].to_string();
       addr: "127.0.0.1:22".to_string(),  // self.addr = p[1].to_string();
-      sess: Session::new().unwrap()
+      sess: Session::new().unwrap(),
+      path: String::from(""),
+      token: String::from("$")
     };
     println!("initializing {}'s connection to {}...", ssftp.username, ssftp.addr);
     ssftp
@@ -39,7 +43,9 @@ impl Ssftp {
 
   /// Prompts user for input and prints server response.
   pub fn run(self) {
-
+    println!();
+    println!("{}", self.path);
+    println!("{}", self.token);
   }
 
   /// Runs the provided command.
