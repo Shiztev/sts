@@ -1,7 +1,7 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::Session;
-use std::net::TcpStream;
+use std::{net::TcpStream, io::Read};
 use rpassword;
 
 pub struct Ssftp {
@@ -15,14 +15,18 @@ pub struct Ssftp {
 impl Ssftp {
   /// Initialize an Ssftp instance from the given username and address.
   pub fn new(args: &String) -> Ssftp {
-    let _p: Vec<&str> = args.split("@").collect();
+    let p: Vec<&str> = args.split("@").collect();
+    let mut address = p[1].to_string();
+    address.push_str(":22");
+
     let ssftp: Ssftp = Ssftp {
-      username: "".to_string(),  // self.username = p[0].to_string();
-      addr: "127.0.0.1:22".to_string(),  // self.addr = p[1].to_string();
+      username: p[0].to_string(),
+      addr: address,
       sess: Session::new().unwrap(),
       path: String::from(""),
       token: String::from("$")
     };
+
     println!("initializing {}'s connection to {}...", ssftp.username, ssftp.addr);
     ssftp
   }
@@ -30,7 +34,13 @@ impl Ssftp {
   /// Start an ssh connection via tcp to the instances address. Prompts for a password.
   pub fn ssh_init(&mut self) {
     println!("establishing {}'s connection at {}...", self.username, self.addr);
-    let tcp:TcpStream = TcpStream::connect(self.addr.as_str()).unwrap();
+    let tcp_result = TcpStream::connect(self.addr.as_str());
+
+    let tcp = match tcp_result {
+      Ok(t) => t,
+      Err(e) => panic!("Problem establishing connection: {}", e),
+    };
+
     self.sess.set_tcp_stream(tcp);
     self.sess.handshake().unwrap();
     // TODO: determine if a password is needed(?)
@@ -43,23 +53,20 @@ impl Ssftp {
 
   /// Prompts user for input and prints server response.
   pub fn run(self) {
-    println!();
-    println!("{}", self.path);
-    println!("{}", self.token);
+    let mut channel = self.sess.channel_session().unwrap();
+    channel.exec("ls").unwrap();
+    let mut s = String::new();
+    channel.read_to_string(&mut s).unwrap();
+    println!("{}", s);
+    channel.wait_close();
+    println!("{}", channel.exit_status().unwrap());
+    //println!();
+    //println!("{}", self.path);
+    //println!("{}", self.token);
   }
 
-  /// Runs the provided command.
-  pub fn run_cmd(cmd: String) {
+  ///// Runs the provided command.
+  //fn run_cmd(cmd: String) {
 
-  }
-
-  /// Run an ssh command.
-  fn ssh_cmd() {
-
-  }
-
-  /// Run an sftp command.
-  fn sftp_cmd() {
-    
-  }
+  //}
 }
