@@ -15,7 +15,7 @@ To run: `cargo run`
 To build: `cargo build`
 
 
-# Credits
+# Dependancies and Credits
 <a target="_blank" href="https://github.com/sfackler/rust-openssl">openssl library</a>
 
 <a target="_blank" href="https://github.com/alexcrichton/ssh2-rs">ssh2-rs library</a>
