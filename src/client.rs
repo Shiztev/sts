@@ -44,11 +44,9 @@ impl Ssftp {
     // Set up session and authenticate
     self.sess.set_tcp_stream(tcp);
     self.sess.handshake().unwrap();
-    // TODO: determine if a password is needed(?)
-    // rpassword docs: https://docs.rs/rpassword/6.0.1/rpassword/
-    let password: String = rpassword::prompt_password("password: ").unwrap();  // read password
-    self.sess.userauth_password(self.username.as_str(), password.as_str()).unwrap();  // auth
-    // if no password needed: s.userauth_agent(username).unwrap();
+    // TODO: determine if a password is needed(?), if no password needed: s.userauth_agent(username).unwrap();
+    let password: String = rpassword::prompt_password("password: ").unwrap();
+    self.sess.userauth_password(self.username.as_str(), password.as_str()).unwrap();
     println!("connection successful");
   }
 
