@@ -1,7 +1,7 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::Session;
-use std::{net::TcpStream, io::Read};
+use std::{net::TcpStream, io::{stdin, Read}};
 use rpassword;
 
 pub struct Ssftp {
@@ -53,16 +53,40 @@ impl Ssftp {
 
   /// Prompts user for input and prints server response.
   pub fn run(self) {
-    let mut channel = self.sess.channel_session().unwrap();
-    channel.exec("ls").unwrap();
-    let mut s = String::new();
-    channel.read_to_string(&mut s).unwrap();
-    println!("{}", s);
-    channel.wait_close();
-    println!("{}", channel.exit_status().unwrap());
-    //println!();
-    //println!("{}", self.path);
-    //println!("{}", self.token);
+    let mut buf:String = String::new();
+    let mut channel: ssh2::Channel;
+    let mut exit_code: i32;
+
+    while buf != "exit" {
+      // Read input
+      buf.clear();
+      stdin().read_line(&mut buf).expect("Problem reading user input");
+
+      // Create channel
+      match self.sess.channel_session() {
+        Ok(c) => channel = c,
+        Err(e) => panic!("Probelm creating channel: {}", e),
+      }
+
+      // Execute command
+      channel.exec(&buf).expect("Problem executing command");
+      channel.read_to_string(&mut buf).expect("Problem reading server response");
+      println!("{}", buf);
+
+      // Cleanup and prep for next command
+      channel.wait_close().expect("Problem waiting on server result");
+      match channel.exit_status() {
+        Ok(n) => exit_code = n,
+        Err(e) => panic!("Problem getting exit status: {}", e)
+      }
+
+      if exit_code != 0 {
+        println!("Program ended with exit code {}", exit_code);
+      }
+      println!();
+      println!("{}", self.path);
+      println!("{}", self.token);
+    }
   }
 
   ///// Runs the provided command.
