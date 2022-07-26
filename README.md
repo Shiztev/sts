@@ -10,9 +10,11 @@ Rust >= 1.60.0
 # Commands
 First, install the dependancies: `cargo install --path .`
 
-To run: `cargo run`
+To run: `cargo run -- <username>@<ip/hostname/...>`
 
-To build: `cargo build`
+To build then run: `cargo build`
+
+`ssftp <username>@<ip/hostname/...>`
 
 
 # Dependancies and Credits

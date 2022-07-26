@@ -1,66 +1,101 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::Session;
-use std::net::TcpStream;
+use std::{net::TcpStream, io::{stdin, Read}};
 use rpassword;
 
-// TODO: INSTALL libssl.so.1.1, if need be see: https://github.com/openssl/openssl/issues/1740
-
-/// Start an SSH and SFTP connection, and loop while executing user commands.
-pub fn run(args: &str) {
-  // reference: https://docs.rs/ssh2/latest/ssh2/index.html
-  println!("Run is running!");
-
-  // TODO: read ip and username from CLI
-  let p: Vec<&str> = args.split("@").collect();
-
-  // let username: &str = p[0];
-  let username: &str = "";
-  // let addr: &str = p[1];
-  let addr: &str = "127.0.0.1:22";
-
-
-  let p_needed: bool = true;
-
-  // Connect to SSH dest
-  let tcp: TcpStream = TcpStream::connect(addr).unwrap();
-
-  // Start session
-  let mut s: Session = Session::new().unwrap();
-  s.set_tcp_stream(tcp);  // provide a tcp stream to route communication through
-  s.handshake().unwrap();  // confirm conneciton
-
-  // determine if password is needed
-
-  if p_needed {
-    // rpassword docs: https://docs.rs/rpassword/6.0.1/rpassword/
-    let password: String = rpassword::prompt_password("password: ").unwrap();  // read password
-    s.userauth_password(username, password.as_str()).unwrap();  // auth
-
-  } else {
-    s.userauth_agent(username).unwrap();  // auth
-  }
-
-
-  // test code
-  let mut a = s.agent().unwrap();
-
-  // Check agent
-  a.connect().unwrap();
-  a.list_identities().unwrap();
-  
-  for i in a.identities().unwrap() {
-    println!("{}", i.comment());
-    let _pk = i.blob();
-  }
+pub struct Ssftp {
+  username: String,
+  addr: String,
+  sess: Session,
+  path: String,
+  token: String
 }
 
-/// SSH commands
-mod ssh {
+impl Ssftp {
+  /// Initialize an Ssftp instance from the given username and address.
+  pub fn new(args: &String) -> Ssftp {
+    // Distingush and setup address and username
+    let p: Vec<&str> = args.split("@").collect();
+    let mut address: String = p[1].to_string();
+    address.push_str(":22");
 
-}
+    let ssftp: Ssftp = Ssftp {
+      username: p[0].to_string(),
+      addr: address,
+      sess: Session::new().unwrap(),
+      path: String::from(""),
+      token: String::from("$")
+    };
 
-/// SFTP commands
-mod sftp {
+    println!("initializing {}'s connection to {}...", ssftp.username, ssftp.addr);
+    ssftp
+  }
 
+  /// Start an ssh connection via tcp to the instances address. Prompts for a password.
+  pub fn ssh_init(&mut self) {
+    // Establish tcp connection
+    println!("establishing {}'s connection at {}...", self.username, self.addr);
+    let tcp: TcpStream = match TcpStream::connect(self.addr.as_str()) {
+      Ok(t) => t,
+      Err(e) => panic!("Problem establishing connection: {}", e),
+    };
+
+    // Set up session and authenticate
+    self.sess.set_tcp_stream(tcp);
+    self.sess.handshake().unwrap();
+    // TODO: determine if a password is needed(?), if no password needed: s.userauth_agent(username).unwrap();
+    let password: String = rpassword::prompt_password("password: ").unwrap();
+    self.sess.userauth_password(self.username.as_str(), password.as_str()).unwrap();
+    println!("connection successful");
+  }
+
+  /// Prompts user for input and prints server response.
+  pub fn run(self) {
+    let mut cmd:String = String::new();
+    let mut exit_code: i32;
+
+    while cmd != "exit" {
+      // Read input
+      cmd.clear();
+      stdin().read_line(&mut cmd).expect("Problem reading user input");
+
+      // Execute command and print output
+      exit_code = self.run_cmd(&cmd);
+      if exit_code != 0 {
+        println!("Program ended with exit code {}", exit_code);
+      }
+      println!();
+      println!("{}", self.path);
+      println!("{}", self.token);
+    }
+  }
+
+  /// Runs the provided command.
+  fn run_cmd(&self, cmd: &String) -> i32 {
+    let mut channel: ssh2::Channel;
+    let mut output: String = String::new();
+    let exit_code: i32;
+
+    // Create channel
+    match self.sess.channel_session() {
+      Ok(c) => channel = c,
+      Err(e) => panic!("Probelm creating channel: {}", e),
+    }
+
+    // Execute command
+    channel.exec(&cmd).expect("Problem executing command");
+    channel.read_to_string(&mut output).expect("Problem reading server response");
+    println!("{}", output);
+
+    // Cleanup and prep for next command
+    channel.wait_close().expect("Problem waiting on server result");
+    match channel.exit_status() {
+      Ok(n) => exit_code = n,
+      Err(e) => panic!("Problem getting exit status: {}", e)
+    }
+
+    // TODO: update self.path
+    exit_code
+  }
 }
