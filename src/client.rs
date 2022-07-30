@@ -55,7 +55,7 @@ impl Ssftp {
     let mut cmd:String = String::new();
     let mut exit_code: i32;
 
-    while cmd != "exit" {
+    while cmd.trim_end() != "exit" {
       // Read input
       cmd.clear();
       stdin().read_line(&mut cmd).expect("Problem reading user input");
