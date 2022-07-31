@@ -9,6 +9,7 @@ pub struct Ssftp {
   addr: String,
   sess: Session,
   path: String,
+  home: String,
   token: String
 }
 
@@ -18,13 +19,16 @@ impl Ssftp {
     // Distingush and setup address and username
     let p: Vec<&str> = args.split("@").collect();
     let mut address: String = p[1].to_string();
+    let u_name:String = p[0].to_string();
+    let loc = format!("/home/{}", u_name);
     address.push_str(":22");
 
     let ssftp: Ssftp = Ssftp {
-      username: p[0].to_string(),
+      username: u_name.clone(),
       addr: address,
       sess: Session::new().unwrap(),
-      path: String::from(""),
+      path: String::from(&loc),
+      home: String::from(&loc),
       token: String::from("$")
     };
 
@@ -51,28 +55,29 @@ impl Ssftp {
   }
 
   /// Prompts user for input and prints server response.
-  pub fn run(self) {
+  pub fn run(mut self) {
     let mut cmd:String = String::new();
     let mut exit_code: i32;
 
     while cmd.trim_end() != "exit" {
+      //self.update_prompt();
+      println!("{}\n{}", self.path, self.token);
+
       // Read input
       cmd.clear();
       stdin().read_line(&mut cmd).expect("Problem reading user input");
 
       // Execute command and print output
+      cmd = format!("cd {} && {} && pwd", self.path, cmd.trim_end());
       exit_code = self.run_cmd(&cmd);
       if exit_code != 0 {
         println!("Program ended with exit code {}", exit_code);
       }
-      println!();
-      println!("{}", self.path);
-      println!("{}", self.token);
     }
   }
 
   /// Runs the provided command.
-  fn run_cmd(&self, cmd: &String) -> i32 {
+  fn run_cmd(&mut self, cmd: &String) -> i32 {
     let mut channel: ssh2::Channel;
     let mut output: String = String::new();
     let exit_code: i32;
@@ -83,10 +88,18 @@ impl Ssftp {
       Err(e) => panic!("Probelm creating channel: {}", e),
     }
 
-    // Execute command
+    // Execute command and parse out path
     channel.exec(&cmd).expect("Problem executing command");
     channel.read_to_string(&mut output).expect("Problem reading server response");
-    println!("{}", output);
+    let v3: Vec<&str> = output.split("\n").collect();
+
+    self.path = v3[v3.len() - 2].to_string();
+    let l = self.path.len();
+    if self.path == self.home {
+      self.path = String::from("~");
+    }
+
+    println!("{}", &output[..output.len() - l - 1]);
 
     // Cleanup and prep for next command
     channel.wait_close().expect("Problem waiting on server result");
@@ -95,7 +108,6 @@ impl Ssftp {
       Err(e) => panic!("Problem getting exit status: {}", e)
     }
 
-    // TODO: update self.path
     exit_code
   }
 }
