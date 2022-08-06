@@ -1,7 +1,7 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::Session;
-use std::{net::TcpStream, io::{stdin, Read}};
+use std::{net::TcpStream, io::{stdin, Read, Write}, path::Path};
 use rpassword;
 
 pub struct Ssftp {
@@ -122,7 +122,22 @@ impl Ssftp {
 
   // Upload a file.
   fn upload(&self, parts: Vec<&str>) {
-    return;
+    let path: &Path;
+    let mode: i32;
+    let size: u64;
+
+    // TODO: get stuff from parts var
+    path = Path::new("");
+    mode = 0o644;
+    size = 10;
+
+    let mut remote_file = self.sess.scp_send(path, mode, size, None).unwrap();
+    remote_file.write(b"1234567890").unwrap();
+    // Close the channel and wait for the whole content to be tranferred
+    remote_file.send_eof().unwrap();
+    remote_file.wait_eof().unwrap();
+    remote_file.close().unwrap();
+    remote_file.wait_close().unwrap();
   }
 
   // Download a file.
