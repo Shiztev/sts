@@ -93,6 +93,7 @@ impl Ssftp {
     parts = cmd.split(" ").collect();
     match parts[0] {
       "put" => self.upload(parts),
+      "get" => self.download(parts),
       _ => ()
     }
 
@@ -121,6 +122,11 @@ impl Ssftp {
 
   // Upload a file.
   fn upload(&self, parts: Vec<&str>) {
+    return;
+  }
+
+  // Download a file.
+  fn download(&self, parts: Vec<&str>) {
     return;
   }
 }
