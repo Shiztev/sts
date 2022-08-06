@@ -128,8 +128,12 @@ impl Ssftp {
     let len = parts.len();
 
     if len < 2 {
-      println!("Usage: put <flags> <local file> <OPTIONAL: remote write path>");
+      println!("Usage: put <local file> <OPTIONAL: remote write path>");
       return 1;
+    } else if len == 2 {
+      // TODO
+    } else if len == 3 {
+      // TODO
     } else {
       return 1;
     }
