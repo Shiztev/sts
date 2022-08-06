@@ -81,11 +81,19 @@ impl Ssftp {
     let mut channel: ssh2::Channel;
     let mut output: String = String::new();
     let exit_code: i32;
+    let parts: Vec<&str>;
 
     // Create channel
     match self.sess.channel_session() {
       Ok(c) => channel = c,
       Err(e) => panic!("Probelm creating channel: {}", e),
+    }
+
+    // Check command against internal functionality
+    parts = cmd.split(" ").collect();
+    match parts[0] {
+      "put" => self.upload(parts),
+      _ => ()
     }
 
     // Execute command and parse out path
@@ -109,5 +117,10 @@ impl Ssftp {
     }
 
     exit_code
+  }
+
+  // Upload a file.
+  fn upload(&self, parts: Vec<&str>) {
+    return;
   }
 }
