@@ -92,8 +92,8 @@ impl Ssftp {
     // Check command against internal functionality
     parts = cmd.split(" ").collect();
     match parts[0] {
-      "put" => self.upload(parts),
-      "get" => self.download(parts),
+      "put" => return self.upload(parts),
+      "get" => return self.download(parts),
       _ => ()
     }
 
@@ -121,10 +121,18 @@ impl Ssftp {
   }
 
   // Upload a file.
-  fn upload(&self, parts: Vec<&str>) {
+  fn upload(&self, parts: Vec<&str>) -> i32 {
     let path: &Path;
     let mode: i32;
     let size: u64;
+    let len = parts.len();
+
+    if len < 2 {
+      println!("Usage: put <flags> <local file> <OPTIONAL: remote write path>");
+      return 1;
+    } else {
+      return 1;
+    }
 
     // TODO: get stuff from parts var
     path = Path::new("");
@@ -138,10 +146,12 @@ impl Ssftp {
     remote_file.wait_eof().unwrap();
     remote_file.close().unwrap();
     remote_file.wait_close().unwrap();
+    0
   }
 
   // Download a file.
-  fn download(&self, parts: Vec<&str>) {
-    return;
+  fn download(&self, parts: Vec<&str>) -> i32 {
+    println!("Get command is not yet implemented");
+    1
   }
 }
