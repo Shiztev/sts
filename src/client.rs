@@ -1,6 +1,6 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
-use ssh2::Session;
+use ssh2::{Session};
 use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::File};
 use rpassword;
 
@@ -130,6 +130,7 @@ impl Ssftp {
     let len: usize = parts.len();
     let size: u64;
     let mode: i32 = 0o644;
+    let mut r: i32 = 0;
 
     // TODO: determine write location
     if len < 2 || len > 3 {
@@ -157,14 +158,35 @@ impl Ssftp {
     buf = reader.buffer();
     size = buf.len() as u64;
 
-    let mut remote_file = self.sess.scp_send(path, mode, size, None).unwrap();
-    remote_file.write_all(buf).unwrap();
-    // Close the channel and wait for the whole content to be tranferred
-    remote_file.send_eof().unwrap();
-    remote_file.wait_eof().unwrap();
-    remote_file.close().unwrap();
-    remote_file.wait_close().unwrap();
-    0
+    let mut remote_file = match self.sess.scp_send(path, mode, size, None) {
+        Ok(c) => c,
+        Err(e) => {println!("Error while opening upload channel: {}", e); return 1;}
+    };
+
+    // Write
+    match remote_file.write_all(buf) {
+      Ok(_) => (),
+      Err(e) => {println!("Error while writing buffer: {}", e); r = 2;},
+    }
+
+    // Close
+    match remote_file.send_eof() {
+      Ok(_) => (),
+      Err(e) => {println!("Error sending eof: {}", e); r = 3},
+    }
+    match remote_file.wait_eof() {
+      Ok(_) => (),
+      Err(e) => {println!("Error waiting for eof: {}", e); r = 4},
+    }
+    match remote_file.close() {
+      Ok(_) => (),
+      Err(e) => {println!("Error closing upload channel: {}", e); r = 5;},
+    }
+    match remote_file.wait_close() {
+      Ok(_) => (),
+      Err(e) => {println!("Error waiting for upload channel to close: {}", e); r = 6;},
+    }
+    r
   }
 
   // Download a file.
