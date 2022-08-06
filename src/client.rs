@@ -1,7 +1,7 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::Session;
-use std::{net::TcpStream, io::{stdin, Read, Write}, path::Path};
+use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::File};
 use rpassword;
 
 pub struct Ssftp {
@@ -122,29 +122,43 @@ impl Ssftp {
 
   // Upload a file.
   fn upload(&self, parts: Vec<&str>) -> i32 {
+    let buf: &[u8];
     let path: &Path;
-    let mode: i32;
+    let reader:BufReader<File>;
+    let f:File;
+    let mut p: String;
+    let len: usize = parts.len();
     let size: u64;
-    let len = parts.len();
+    let mode: i32 = 0o644;
 
-    if len < 2 {
+    // TODO: determine write location
+    if len < 2 || len > 3 {
       println!("Usage: put <local file> <OPTIONAL: remote write path>");
       return 1;
     } else if len == 2 {
-      // TODO
+      p = self.path.clone();
+      let local_path: Vec<&str> = parts[1].split("/").collect();
+      let local_len:usize = local_path.len();
+      if local_len <= 0 {
+        println!("Local filepath is too short: {} locations in filepath", local_len);
+        return 1;
+      }
+      p.push_str(local_path[local_len - 1]);
+      path = Path::new(p.as_str());
     } else if len == 3 {
-      // TODO
+      path = Path::new(parts[2]);
     } else {
+      println!("Unreachable conditional for self.upload() reached... somehow.... You're a mad lad.");
       return 1;
     }
 
-    // TODO: get stuff from parts var
-    path = Path::new("");
-    mode = 0o644;
-    size = 10;
+    f = File::open(parts[1]).unwrap();
+    reader = BufReader::new(f);
+    buf = reader.buffer();
+    size = buf.len() as u64;
 
     let mut remote_file = self.sess.scp_send(path, mode, size, None).unwrap();
-    remote_file.write(b"1234567890").unwrap();
+    remote_file.write_all(buf).unwrap();
     // Close the channel and wait for the whole content to be tranferred
     remote_file.send_eof().unwrap();
     remote_file.wait_eof().unwrap();
