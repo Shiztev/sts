@@ -1,6 +1,6 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
-use ssh2::{Session};
+use ssh2::{Session, Channel};
 use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::File};
 use rpassword;
 
@@ -158,7 +158,7 @@ impl Ssftp {
     buf = reader.buffer();
     size = buf.len() as u64;
 
-    let mut remote_file = match self.sess.scp_send(path, mode, size, None) {
+    let mut remote_file: Channel = match self.sess.scp_send(path, mode, size, None) {
         Ok(c) => c,
         Err(e) => {println!("Error while opening upload channel: {}", e); return 1;}
     };
