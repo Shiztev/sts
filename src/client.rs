@@ -59,16 +59,20 @@ impl Ssftp {
     let mut cmd:String = String::new();
     let mut exit_code: i32;
 
-    while cmd.trim_end() != "exit" {
+    loop {
       //self.update_prompt();
       println!("{}\n{}", self.path, self.token);
 
-      // Read input
+      // Read input and trim
       cmd.clear();
       stdin().read_line(&mut cmd).expect("Problem reading user input");
+      cmd = cmd.trim_end().to_owned();
+
+      if cmd == "exit" {
+        return;
+      }
 
       // Execute command and print output
-      cmd = format!("cd {} && {} && pwd", self.path, cmd.trim_end());
       exit_code = self.run_cmd(&cmd);
       if exit_code != 0 {
         println!("Program ended with exit code {}", exit_code);
@@ -80,6 +84,7 @@ impl Ssftp {
   fn run_cmd(&mut self, cmd: &String) -> i32 {
     let mut channel: ssh2::Channel;
     let mut output: String = String::new();
+    let command: String;
     let exit_code: i32;
     let parts: Vec<&str>;
 
@@ -97,11 +102,13 @@ impl Ssftp {
       _ => ()
     }
 
-    // Execute command and parse out path
-    channel.exec(&cmd).expect("Problem executing command");
+    // Format and execute command
+    command = format!("cd {} && {} && pwd", self.path, cmd);
+    channel.exec(&command).expect("Problem executing command");
     channel.read_to_string(&mut output).expect("Problem reading server response");
     let v3: Vec<&str> = output.split("\n").collect();
 
+    // Parse out path
     self.path = v3[v3.len() - 2].to_string();
     let l = self.path.len();
     if self.path == self.home {
@@ -122,9 +129,9 @@ impl Ssftp {
 
   // Upload a file.
   fn upload(&self, parts: Vec<&str>) -> i32 {
-    let buf: &[u8];
+    let mut buf: Vec<u8> = Vec::new();
     let path: &Path;
-    let reader:BufReader<File>;
+    let mut reader:BufReader<File>;
     let f:File;
     let mut p: String;
     let len: usize = parts.len();
@@ -144,7 +151,7 @@ impl Ssftp {
         println!("Local filepath is too short: {} locations in filepath", local_len);
         return 1;
       }
-      p.push_str(local_path[local_len - 1]);
+      p = format!("{}/{}", self.path, local_path[local_len - 1]);
       path = Path::new(p.as_str());
     } else if len == 3 {
       path = Path::new(parts[2]);
@@ -153,10 +160,15 @@ impl Ssftp {
       return 1;
     }
 
-    f = File::open(parts[1]).unwrap();
+    f = match File::open(parts[1]) {
+      Ok(file) => file,
+      Err(e) => {println!("Error while opening file {}: {}", parts[1], e); return 1;}
+    };
     reader = BufReader::new(f);
-    buf = reader.buffer();
-    size = buf.len() as u64;
+    size = match reader.read_to_end(&mut buf) {
+      Ok(i) => i,
+      Err(e) => {println!("Error while reading file contents: {}", e); return 1;}
+    } as u64;
 
     let mut remote_file: Channel = match self.sess.scp_send(path, mode, size, None) {
         Ok(c) => c,
@@ -164,7 +176,7 @@ impl Ssftp {
     };
 
     // Write
-    match remote_file.write_all(buf) {
+    match remote_file.write_all(&buf) {
       Ok(_) => (),
       Err(e) => {println!("Error while writing buffer: {}", e); r = 2;},
     }
