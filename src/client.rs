@@ -161,7 +161,10 @@ impl Ssftp {
     }
 
     // better file read option:
-    // buf = fs::read(parts[1]).expect("Unable to read file.")
+    // match fs::read(parts[1]) {
+    //   Ok(b) => buf = b,
+    //   Err(e) => {println!("Error reading from local file {}: {}", parts[1], e), return 1;}
+    // }
 
     f = match File::open(parts[1]) {
       Ok(file) => file,
