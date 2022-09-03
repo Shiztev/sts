@@ -1,6 +1,6 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
-use ssh2::{Session, Channel};
+use ssh2::{Session, Channel, ScpFileStat};
 use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::File};
 use rpassword;
 
@@ -203,6 +203,17 @@ impl Ssftp {
 
   // Download a file.
   fn download(&self, parts: Vec<&str>) -> i32 {
+    let remote_f_name: &str;
+    let remote_file: Channel;
+    let stat: ScpFileStat;
+    let file_size: u64;
+
+    match self.sess.scp_recv(Path::new(remote_f_name)) {
+        Ok(r) => {(remote_file, stat) = r},
+        Err(e) => {println!("Error receiving file: {}", remote_f_name); return 1;},
+    }
+    file_size = stat.size();
+
     println!("Get command is not yet implemented");
     1
   }
