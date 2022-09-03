@@ -1,7 +1,7 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
 use ssh2::{Session, Channel, ScpFileStat};
-use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::File};
+use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::{File, self}};
 use rpassword;
 
 pub struct Ssftp {
@@ -160,6 +160,9 @@ impl Ssftp {
       return 1;
     }
 
+    // better file read option:
+    // buf = fs::read(parts[1]).expect("Unable to read file.")
+
     f = match File::open(parts[1]) {
       Ok(file) => file,
       Err(e) => {println!("Error while opening file {}: {}", parts[1], e); return 1;}
@@ -205,23 +208,43 @@ impl Ssftp {
   fn download(&self, parts: Vec<&str>) -> i32 {
     let remote_f_name: &str;
     let local_f_name: &str;
-    let remote_file: Channel;
+    let mut channel: Channel;
     let stat: ScpFileStat;
+    let mut buf = Vec::new();
     let file_size: u64;
 
     if (parts.len() < 2) || (parts.len() > 3) {
       println!("Usage: get <remote file name/path> <OPTIONAL: local file name/path>");
-    } else if parts.len() == 3 {
-      local_f_name = parts[2];
+      return 1;
+    } else {
+        remote_f_name = parts[1];
+
+        if parts.len() == 3 {
+          local_f_name = parts[2];
+        } else {
+          let temp: Vec<&str> = remote_f_name.split("/").collect();
+          let l = temp.len();
+          if l <= 0 {
+            println!("Remote filepath too short: {} locations in filepath.", l);
+            return 1;
+          }
+          local_f_name = temp[l - 1];
+        }
     }
 
-    remote_f_name = parts[1];
-
+    // Get data from remote file
     match self.sess.scp_recv(Path::new(remote_f_name)) {
-        Ok(r) => {(remote_file, stat) = r},
-        Err(e) => {println!("Error receiving file: {}", remote_f_name); return 1;},
+        Ok(r) => {(channel, stat) = r},
+        Err(e) => {println!("Error starting channel to download file {}: {}", remote_f_name, e); return 1;},
     }
     file_size = stat.size();
+    match channel.read_to_end(&mut buf) {
+      Ok(i) => (),
+      Err(e) => {println!("Error reading file {}: {}", remote_f_name, e); return 1;}
+    }
+
+    // Write data to local file
+    fs::write(local_f_name, buf);
 
     println!("Get command is not yet implemented");
     1
