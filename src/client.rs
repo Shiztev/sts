@@ -204,9 +204,18 @@ impl Ssftp {
   // Download a file.
   fn download(&self, parts: Vec<&str>) -> i32 {
     let remote_f_name: &str;
+    let local_f_name: &str;
     let remote_file: Channel;
     let stat: ScpFileStat;
     let file_size: u64;
+
+    if (parts.len() < 2) || (parts.len() > 3) {
+      println!("Usage: get <remote file name/path> <OPTIONAL: local file name/path>");
+    } else if parts.len() == 3 {
+      local_f_name = parts[2];
+    }
+
+    remote_f_name = parts[1];
 
     match self.sess.scp_recv(Path::new(remote_f_name)) {
         Ok(r) => {(remote_file, stat) = r},
