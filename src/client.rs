@@ -244,9 +244,11 @@ impl Ssftp {
     }
 
     // Write data to local file
-    fs::write(local_f_name, buf);
+    match fs::write(local_f_name, buf) {
+      Ok(s) => (),
+      Err(e) => {println!("Error writing to local file {}: {}", local_f_name, e); return 1},
+    }
 
-    println!("Get command is not yet implemented");
-    1
+    0
   }
 }
