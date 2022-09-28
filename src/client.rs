@@ -166,21 +166,20 @@ impl Ssftp {
       return 1;
     }
 
-    // better file read option:
-    // match fs::read(parts[1]) {
-    //   Ok(b) => buf = b,
-    //   Err(e) => {println!("Error reading from local file {}: {}", parts[1], e), return 1;}
-    // }
+    match fs::read(parts[1]) {
+      Ok(b) => {buf = b; size = buf.len() as u64;},
+      Err(e) => {println!("Error reading from local file {}: {}", parts[1], e); return 1;}
+    }
 
-    f = match File::open(parts[1]) {
-      Ok(file) => file,
-      Err(e) => {println!("Error while opening file {}: {}", parts[1], e); return 1;}
-    };
-    reader = BufReader::new(f);
-    size = match reader.read_to_end(&mut buf) {
-      Ok(i) => i,
-      Err(e) => {println!("Error while reading file contents: {}", e); return 1;}
-    } as u64;
+    // f = match File::open(parts[1]) {
+    //   Ok(file) => file,
+    //   Err(e) => {println!("Error while opening file {}: {}", parts[1], e); return 1;}
+    // };
+    // reader = BufReader::new(f);
+    // size = match reader.read_to_end(&mut buf) {
+    //   Ok(i) => i,
+    //   Err(e) => {println!("Error while reading file contents: {}", e); return 1;}
+    // } as u64;
 
     remote_file = match self.sess.scp_send(path, mode, size, None) {
         Ok(c) => c,
@@ -247,6 +246,7 @@ impl Ssftp {
   }
 }
 
+/// TODO: refactor to use with download after download fixed
 /// Close a channel and handle errors.
 fn close_channel(remote_file: &mut Channel, r: &mut i32) {
   match remote_file.send_eof() {
