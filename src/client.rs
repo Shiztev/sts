@@ -54,6 +54,15 @@ impl Ssftp {
     println!("connection successful");
   }
 
+  /// Parse out the current path in the remote machine. Returns length of the new path.
+  fn get_path(&mut self, parts: Vec<&str>) -> usize {
+    self.path = parts[parts.len() - 2].to_string();
+    if self.path == self.home {
+      self.path = String::from("~");
+    }
+    self.path.len()
+  }
+
   /// Prompts user for input and prints server response.
   pub fn run(mut self) {
     let mut cmd:String = String::new();
@@ -86,7 +95,8 @@ impl Ssftp {
     let mut output: String = String::new();
     let command: String;
     let exit_code: i32;
-    let parts: Vec<&str>;
+    let mut parts: Vec<&str>;
+    let l: usize;
 
     // Create channel
     match self.sess.channel_session() {
@@ -106,14 +116,9 @@ impl Ssftp {
     command = format!("cd {} && {} && pwd", self.path, cmd);
     channel.exec(&command).expect("Problem executing command");
     channel.read_to_string(&mut output).expect("Problem reading server response");
-    let v3: Vec<&str> = output.split("\n").collect();
+    parts = output.split("\n").collect();
 
-    // Parse out path
-    self.path = v3[v3.len() - 2].to_string();
-    let l = self.path.len();
-    if self.path == self.home {
-      self.path = String::from("~");
-    }
+    l = self.get_path(parts);
 
     println!("{}", &output[..output.len() - l - 1]);
 
@@ -134,6 +139,7 @@ impl Ssftp {
     let mut reader:BufReader<File>;
     let f:File;
     let mut p: String;
+    let mut remote_file: Channel;
     let len: usize = parts.len();
     let size: u64;
     let mode: i32 = 0o644;
@@ -176,7 +182,7 @@ impl Ssftp {
       Err(e) => {println!("Error while reading file contents: {}", e); return 1;}
     } as u64;
 
-    let mut remote_file: Channel = match self.sess.scp_send(path, mode, size, None) {
+    remote_file = match self.sess.scp_send(path, mode, size, None) {
         Ok(c) => c,
         Err(e) => {println!("Error while opening upload channel: {}", e); return 1;}
     };
@@ -187,23 +193,8 @@ impl Ssftp {
       Err(e) => {println!("Error while writing buffer: {}", e); r = 2;},
     }
 
-    // Close
-    match remote_file.send_eof() {
-      Ok(_) => (),
-      Err(e) => {println!("Error sending eof: {}", e); r = 3},
-    }
-    match remote_file.wait_eof() {
-      Ok(_) => (),
-      Err(e) => {println!("Error waiting for eof: {}", e); r = 4},
-    }
-    match remote_file.close() {
-      Ok(_) => (),
-      Err(e) => {println!("Error closing upload channel: {}", e); r = 5;},
-    }
-    match remote_file.wait_close() {
-      Ok(_) => (),
-      Err(e) => {println!("Error waiting for upload channel to close: {}", e); r = 6;},
-    }
+    // Ensure channel is closed
+    close_channel(&mut remote_file, &mut r);
     r
   }
 
@@ -253,5 +244,25 @@ impl Ssftp {
     }
 
     0
+  }
+}
+
+/// Close a channel and handle errors.
+fn close_channel(remote_file: &mut Channel, r: &mut i32) {
+  match remote_file.send_eof() {
+    Ok(_) => (),
+    Err(e) => {println!("Error sending eof: {}", e); *r += 1;},
+  }
+  match remote_file.wait_eof() {
+    Ok(_) => (),
+    Err(e) => {println!("Error waiting for eof: {}", e); *r += 2;},
+  }
+  match remote_file.close() {
+    Ok(_) => (),
+    Err(e) => {println!("Error closing upload channel: {}", e); *r += 3;},
+  }
+  match remote_file.wait_close() {
+    Ok(_) => (),
+    Err(e) => {println!("Error waiting for upload channel to close: {}", e); *r += 4;},
   }
 }
