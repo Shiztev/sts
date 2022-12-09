@@ -1,10 +1,16 @@
-/// Starts and manages both an SSH and a SFTP connection, running user commands.
-
-pub mod client {
+pub mod ssftp {
   use ssh2::{Session, Channel, ScpFileStat};
   use std::{net::TcpStream, io::{stdin, Read, Write, BufReader}, path::Path, fs::{File, self}};
   use rpassword;
-  use crate::Ssftp;
+
+  pub struct Ssftp {
+    username: String,
+    addr: String,
+    sess: Session,
+    path: String,
+    home: String,
+    token: String
+  }
 
   impl Ssftp {
     /// Initialize an Ssftp instance from the given username and address.
@@ -15,7 +21,7 @@ pub mod client {
       let u_name:String = p[0].to_string();
       let loc = format!("/home/{}", u_name);
       address.push_str(":22");
-
+  
       let ssftp: Ssftp = Ssftp {
         username: u_name.clone(),
         addr: address,
@@ -24,11 +30,53 @@ pub mod client {
         home: String::from(&loc),
         token: String::from("$")
       };
-
+  
       println!("initializing {}'s connection to {}...", ssftp.username, ssftp.addr);
       ssftp
     }
 
+
+    /// Start an ssh connection via tcp to the instances address. Prompts for a password.
+    pub fn ssh_init(&mut self) {
+      // Establish tcp connection
+      println!("establishing {}'s connection at {}...", self.username, self.addr);
+      let tcp: TcpStream = match TcpStream::connect(self.addr.as_str()) {
+        Ok(t) => t,
+        Err(e) => panic!("Problem establishing connection: {}", e),
+      };
+  
+      // Set up session and authenticate
+      self.sess.set_tcp_stream(tcp);
+      self.sess.handshake().unwrap();
+  
+      // TODO: determine if a password is needed(?), if no password needed: s.userauth_agent(username).unwrap();
+      let password: String = rpassword::prompt_password("password: ").unwrap();
+      self.sess.userauth_password(self.username.as_str(), password.as_str()).unwrap();
+  
+      // Create channel
+      let mut channel: ssh2::Channel;
+      match self.sess.channel_session() {
+        Ok(c) => channel = c,
+        Err(e) => panic!("Probelm creating channel: {}", e),
+      }
+      channel.shell().expect("Should be able to create shell");
+      match channel.shell() {
+        Ok(_) => (),
+        Err(e) => panic!("Problem creating shell: {}", e),
+      }
+      println!("connection successful");
+    }
+  }
+}
+
+
+pub mod ssh {
+  pub trait Shell {
+    fn ssh_init(&mut self);
+    fn run_cmd(&mut self, cmd: &String, &mut channel: ssh2::Channel) -> i32;
+  }
+
+  impl Shell for Ssftp {
     /// Start an ssh connection via tcp to the instances address. Prompts for a password.
     pub fn ssh_init(&mut self) {
       // Establish tcp connection
@@ -41,92 +89,78 @@ pub mod client {
       // Set up session and authenticate
       self.sess.set_tcp_stream(tcp);
       self.sess.handshake().unwrap();
+
       // TODO: determine if a password is needed(?), if no password needed: s.userauth_agent(username).unwrap();
       let password: String = rpassword::prompt_password("password: ").unwrap();
       self.sess.userauth_password(self.username.as_str(), password.as_str()).unwrap();
+
+      // Create channel
+      let mut channel: ssh2::Channel;
+      match self.sess.channel_session() {
+        Ok(c) => channel = c,
+        Err(e) => panic!("Probelm creating channel: {}", e),
+      }
+      channel.shell().expect("Should be able to create shell");
+      match channel.shell() {
+        Ok(_) => (),
+        Err(e) => panic!("Problem creating shell: {}", e),
+      }
       println!("connection successful");
     }
 
-    /// Parse out the current path in the remote machine. Returns length of the new path.
-    fn get_path(&mut self, parts: Vec<&str>) -> usize {
-      self.path = parts[parts.len() - 2].to_string();
-      if self.path == self.home {
-        self.path = String::from("~");
-      }
-      self.path.len()
-    }
-
-    /// Prompts user for input and prints server response.
-    pub fn run(mut self) {
-      let mut cmd:String = String::new();
-      let mut exit_code: i32;
-
-      loop {
-        //self.update_prompt();
-        println!("{}\n{}", self.path, self.token);
-
-        // Read input and trim
-        cmd.clear();
-        stdin().read_line(&mut cmd).expect("Problem reading user input");
-        cmd = cmd.trim_end().to_owned();
-
-        if cmd == "exit" {
-          return;
-        }
-
-        // Execute command and print output
-        exit_code = self.run_cmd(&cmd);
-        if exit_code != 0 {
-          println!("Program ended with exit code {}", exit_code);
-        }
-      }
-    }
-
     /// Runs the provided command.
-    fn run_cmd(&mut self, cmd: &String) -> i32 {
-      let mut channel: ssh2::Channel;
+    pub fn run_cmd(&mut self, cmd: &String, &mut channel: ssh2::Channel) -> i32 {
       let mut output: String = String::new();
       let command: String;
       let exit_code: i32;
       let mut parts: Vec<&str>;
       let l: usize;
-
-      // Create channel
-      match self.sess.channel_session() {
-        Ok(c) => channel = c,
-        Err(e) => panic!("Probelm creating channel: {}", e),
-      }
-
+  
       // Check command against internal functionality
       parts = cmd.split(" ").collect();
+      /*
       match parts[0] {
         "put" => return self.upload(parts),
         "get" => return self.download(parts),
         _ => ()
       }
-
+      */
+  
       // Format and execute command
-      command = format!("cd {} && {} && pwd", self.path, cmd);
+      //command = format!("cd {} && {} && pwd", self.path, cmd);
       channel.exec(&command).expect("Problem executing command");
       channel.read_to_string(&mut output).expect("Problem reading server response");
       parts = output.split("\n").collect();
-
+  
       l = self.get_path(parts);
-
+  
       println!("{}", &output[..output.len() - l - 1]);
-
+  
       // Cleanup and prep for next command
+      /*
       channel.wait_close().expect("Problem waiting on server result");
       match channel.exit_status() {
         Ok(n) => exit_code = n,
         Err(e) => panic!("Problem getting exit status: {}", e)
       }
-
-      exit_code
+      */
+  
+      //exit_code
     }
+  }
+}
+
+
+mod sftp {
+  pub trait FileTransfer {
+    fn upload(&self, parts: Vec<&str>) -> i32;
+    fn download(&self, parts: Vec<&str>) -> i32;
+  }
+
+  impl FileTransfer for Ssftp {
 
     // Upload a file.
-    fn upload(&self, parts: Vec<&str>) -> i32 {
+    pub fn upload(&self, parts: Vec<&str>) -> i32 {
       let mut buf: Vec<u8> = Vec::new();
       let path: &Path;
       let mut reader:BufReader<File>;
@@ -191,7 +225,7 @@ pub mod client {
     }
 
     // Download a file.
-    fn download(&self, parts: Vec<&str>) -> i32 {
+    pub fn download(&self, parts: Vec<&str>) -> i32 {
       let remote_f_name: &str;
       let local_f_name: &str;
       let mut channel: Channel;
@@ -236,27 +270,6 @@ pub mod client {
       }
 
       0
-    }
-  }
-
-  /// TODO: refactor to use with download after download fixed
-  /// Close a channel and handle errors.
-  fn close_channel(remote_file: &mut Channel, r: &mut i32) {
-    match remote_file.send_eof() {
-      Ok(_) => (),
-      Err(e) => {println!("Error sending eof: {}", e); *r += 1;},
-    }
-    match remote_file.wait_eof() {
-      Ok(_) => (),
-      Err(e) => {println!("Error waiting for eof: {}", e); *r += 2;},
-    }
-    match remote_file.close() {
-      Ok(_) => (),
-      Err(e) => {println!("Error closing upload channel: {}", e); *r += 3;},
-    }
-    match remote_file.wait_close() {
-      Ok(_) => (),
-      Err(e) => {println!("Error waiting for upload channel to close: {}", e); *r += 4;},
     }
   }
 }
