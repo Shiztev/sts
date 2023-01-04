@@ -1,5 +1,5 @@
-# ssftp
-A CLI application that combines SSH and SFTP functionality to simplify and unify the two services.
+# STS
+Secure Transfering Shell is a CLI application that combines SSH and SFTP functionality to simplify and unify the two services.
 
 
 ## Requirements
