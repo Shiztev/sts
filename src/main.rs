@@ -2,6 +2,7 @@ use std::{env, net::TcpStream};
 use ssftp::ssftp::Ssftp;
 use ssh2::{Session, Channel, ScpFileStat};
 mod ssftp;
+mod sts;
 
 
 /// Runs the provided command.
