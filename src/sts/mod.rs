@@ -94,6 +94,25 @@ impl Sts {
 		sts
 	}
 
+    pub fn test(&mut self) {
+        let mut channel: Channel = self.sess.channel_session().expect("error creating test channel");
+        channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
+        channel.shell().expect("error making channel a shell");
+
+        channel.exec("ls").unwrap();
+
+        let mut s: String = String::new();
+        channel.read_to_string(&mut s).unwrap();
+        println!("{}", s);
+
+        channel.exec("diff ~/.bashrc ~/.vimrc").unwrap();
+        channel.exec("pwd").unwrap();
+        channel.read_to_string(&mut s).unwrap();
+        println!("{}", s);
+
+        channel.wait_close().unwrap();
+    }
+
 	pub fn run(&mut self) {
 		let mut cmd: String = String::new();
 		let mut exit_code: i32;
