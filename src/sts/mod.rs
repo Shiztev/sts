@@ -20,7 +20,6 @@ pub struct Sts {
 mod estab {
 	use std::net::TcpStream;
 	use ssh2::{Session, Channel};
-	use std::io::Read;
 
 	/// Create an ssh session.
 	pub fn estab_connection(username: &String, addr: &String) -> (Session, Channel) {
@@ -74,6 +73,73 @@ mod estab {
 }
 
 
+use std::net::TcpStream;
+pub fn full_test(args: &String) {
+
+	/***** get username and addr ******/
+	let p: Vec<&str> = args.split("@").collect();
+	let mut addr: String = p[1].to_string();
+	let username: String = p[0].to_string();
+	addr.push_str(":22");
+
+
+	/***** set up tcp and session *****/
+	let mut sess: Session = Session::new().unwrap();
+	let tcp: TcpStream = TcpStream::connect(addr.as_str()).unwrap();
+
+	// Set up session and authenticate
+	sess.set_tcp_stream(tcp);
+	sess.handshake().unwrap();
+
+	/***** password *****/
+	// TODO: determine if a password is needed(?), if no password needed: s.userauth_agent(username).unwrap();
+	let password: String = rpassword::prompt_password("password: ").unwrap();
+	sess.userauth_password(username.as_str(), password.as_str()).unwrap();
+
+
+	/***** get channel and set to shell *****/
+	let mut channel: Channel = match sess.channel_session() {
+		Ok(c) => c,
+		Err(e) => panic!("Probelm creating channel: {}", e),
+	};
+	channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
+	channel.shell().unwrap();
+
+	sess.set_blocking(true);
+	
+	/***** exec commands *****/
+	let mut s: String = String::new();
+
+	// read initial welcome message
+	for _ in 0..2 {
+		let mut buf = vec![0; 4096];
+		match channel.read(&mut buf) {
+		Ok(_) => {
+			let s = String::from_utf8(buf).unwrap();
+			println!("{}", s);
+		}
+		 Err(e) => {
+			if e.kind() != std::io::ErrorKind::WouldBlock {
+				println!("{}", e);
+			}
+		}
+		}
+	}
+
+	channel.exec("ls").unwrap();
+	channel.read_to_string(&mut s).unwrap();
+	println!("{}", s);
+	s.clear();
+
+	channel.exec("diff ~/.bashrc ~/.vimrc").unwrap();
+	channel.exec("pwd").unwrap();
+	channel.read_to_string(&mut s).unwrap();
+	println!("{}", s);
+
+	channel.wait_close().unwrap();
+}
+
+
 impl Sts {
 	/// Initialize an Sts instance from the given username and address.
 	pub fn new(args: &String) -> Sts {
@@ -94,24 +160,28 @@ impl Sts {
 		sts
 	}
 
-    pub fn test(&mut self) {
-        let mut channel: Channel = self.sess.channel_session().expect("error creating test channel");
-        channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
-        channel.shell().expect("error making channel a shell");
+	pub fn test(&mut self) {
 
-        channel.exec("ls").unwrap();
 
-        let mut s: String = String::new();
-        channel.read_to_string(&mut s).unwrap();
-        println!("{}", s);
 
-        channel.exec("diff ~/.bashrc ~/.vimrc").unwrap();
-        channel.exec("pwd").unwrap();
-        channel.read_to_string(&mut s).unwrap();
-        println!("{}", s);
 
-        channel.wait_close().unwrap();
-    }
+		let mut channel: Channel = self.sess.channel_session().expect("error creating test channel");
+		channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
+		channel.shell().expect("error making channel a shell");
+
+		channel.exec("ls").unwrap();
+
+		let mut s: String = String::new();
+		channel.read_to_string(&mut s).unwrap();
+		println!("{}", s);
+
+		channel.exec("diff ~/.bashrc ~/.vimrc").unwrap();
+		channel.exec("pwd").unwrap();
+		channel.read_to_string(&mut s).unwrap();
+		println!("{}", s);
+
+		channel.wait_close().unwrap();
+	}
 
 	pub fn run(&mut self) {
 		let mut cmd: String = String::new();
