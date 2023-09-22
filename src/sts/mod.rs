@@ -1,6 +1,6 @@
 /// Starts and manages both an SSH and a SFTP connection, running user commands.
 
-use std::io::{stdin, Read};
+use std::io::{stdin, Read, Write};
 
 use ssh2::{Session, Channel};
 
@@ -74,7 +74,11 @@ mod estab {
 
 
 use std::net::TcpStream;
-pub fn full_test(args: &String) {
+extern crate crossbeam;
+use crossbeam::channel::{unbounded, TryRecvError};
+use std::thread;
+use std::io::prelude::*;
+pub fn threaded_full_test(args: &String) {
 
 	/***** get username and addr ******/
 	let p: Vec<&str> = args.split("@").collect();
@@ -96,47 +100,52 @@ pub fn full_test(args: &String) {
 	let password: String = rpassword::prompt_password("password: ").unwrap();
 	sess.userauth_password(username.as_str(), password.as_str()).unwrap();
 
-
 	/***** get channel and set to shell *****/
-	let mut channel: Channel = match sess.channel_session() {
-		Ok(c) => c,
-		Err(e) => panic!("Probelm creating channel: {}", e),
-	};
-	channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
+	let mut channel: Channel = sess.channel_session().unwrap();
+	//channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
 	channel.shell().unwrap();
 
-	sess.set_blocking(true);
+	sess.set_blocking(false);
 	
 	/***** exec commands *****/
-	let mut s: String = String::new();
+	let (trx, rev) = unbounded();
+	thread::spawn(move || loop {
+		let stdin = std::io::stdin();
+		let mut line = String::new();
+		stdin.read_line(&mut line).unwrap();
+		trx.send(line).unwrap();
+	});
 
-	// read initial welcome message
-	for _ in 0..2 {
+	loop {
 		let mut buf = vec![0; 4096];
 		match channel.read(&mut buf) {
-		Ok(_) => {
-			let s = String::from_utf8(buf).unwrap();
-			println!("{}", s);
-		}
-		 Err(e) => {
-			if e.kind() != std::io::ErrorKind::WouldBlock {
-				println!("{}", e);
+			Ok(_) => {
+				let s = String::from_utf8(buf).unwrap();
+				println!("{}", s);
+			}
+			Err(e) => {
+				if e.kind() != std::io::ErrorKind::WouldBlock {
+					println!("{}", e);
+				}
 			}
 		}
+
+		if !rev.is_empty() {
+			match rev.try_recv() {
+				Ok(line) => {
+					let cmd_string = line + "\n";
+					channel.write(cmd_string.as_bytes()).unwrap();
+					channel.flush().unwrap();
+				}
+				Err(TryRecvError::Empty) => {
+					println!("{}", "empty");
+				}
+				Err(TryRecvError::Disconnected) => {
+					println!("{}", "disconnected");
+				}
+			}
 		}
 	}
-
-	channel.exec("ls").unwrap();
-	channel.read_to_string(&mut s).unwrap();
-	println!("{}", s);
-	s.clear();
-
-	channel.exec("diff ~/.bashrc ~/.vimrc").unwrap();
-	channel.exec("pwd").unwrap();
-	channel.read_to_string(&mut s).unwrap();
-	println!("{}", s);
-
-	channel.wait_close().unwrap();
 }
 
 
