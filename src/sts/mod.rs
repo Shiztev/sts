@@ -4,6 +4,15 @@ use std::io::{stdin, Read, Write};
 
 use ssh2::{Session, Channel};
 
+const EXIT: &str	= "exit";
+const PUT: &str		= "put";
+const GET: &str		= "get";
+
+enum State {
+	Continue,
+	Done,
+}
+
 pub struct Sts {
 	username: String,
 	addr: String,
@@ -11,11 +20,9 @@ pub struct Sts {
 	channel: Channel,
 }
 
-
 // NOTE: SEE https://github.com/alexcrichton/ssh2-rs/issues/186
 // and https://github.com/alexcrichton/ssh2-rs/issues/128
 // YOU NEED TO REWORK THE PROGRAM
-
 
 mod estab {
 	use std::net::TcpStream;
@@ -102,7 +109,7 @@ pub fn threaded_full_test(args: &String) {
 
 	/***** get channel and set to shell *****/
 	let mut channel: Channel = sess.channel_session().unwrap();
-	//channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
+	channel.request_pty("xterm", None, Some((80, 24, 0, 0))).unwrap();
 	channel.shell().unwrap();
 
 	sess.set_blocking(false);
@@ -113,6 +120,7 @@ pub fn threaded_full_test(args: &String) {
 		let stdin = std::io::stdin();
 		let mut line = String::new();
 		stdin.read_line(&mut line).unwrap();
+		// TODO: REMOVE USER INPUT FROM SCREEN
 		trx.send(line).unwrap();
 	});
 
@@ -121,7 +129,7 @@ pub fn threaded_full_test(args: &String) {
 		match channel.read(&mut buf) {
 			Ok(_) => {
 				let s = String::from_utf8(buf).unwrap();
-				println!("{}", s);
+				print!("{}", s);  // don't insert extra newlines in output
 			}
 			Err(e) => {
 				if e.kind() != std::io::ErrorKind::WouldBlock {
@@ -133,9 +141,10 @@ pub fn threaded_full_test(args: &String) {
 		if !rev.is_empty() {
 			match rev.try_recv() {
 				Ok(line) => {
-					let cmd_string = line + "\n";
-					channel.write(cmd_string.as_bytes()).unwrap();
-					channel.flush().unwrap();
+					match run(&mut channel, &line) {
+						State::Continue => (),
+						State::Done => return sts_exit(),
+					}
 				}
 				Err(TryRecvError::Empty) => {
 					println!("{}", "empty");
@@ -146,6 +155,36 @@ pub fn threaded_full_test(args: &String) {
 			}
 		}
 	}
+}
+
+fn run(channel: &mut Channel, cmd: &String) -> State {
+	if cmd.contains(PUT) {
+		println!("\'put\' not yet implemented!");
+		// TODO: put
+	} else if cmd.contains(GET) {
+		println!("\'get\' not yet implemented!");
+		// TODO: get
+	} else {
+		sts_write(channel, cmd);
+	}
+
+	if cmd.contains(EXIT) {
+		return State::Done;
+	}
+
+	State::Continue
+}
+
+fn sts_write(channel: &mut Channel, cmd: &String) {
+	channel.write(cmd.as_bytes()).unwrap();
+	channel.flush().unwrap();
+}
+
+fn sts_exit(channel: &mut Channel, cmd: &String) {
+	// TODO: terminate all threads
+	// TODO: use struct sts to close channel
+	// TODO: use struct sts to close session
+	return;
 }
 
 
